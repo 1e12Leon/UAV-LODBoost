@@ -39,7 +39,7 @@ def cycleGANAugmentaion(image_path, xml_path, image_save_path, xml_save_path, mo
                 pic_path = os.path.join(image_path, img_name)
                 # print(pic_path)
                 image = Image.open(pic_path)
-                print(image)
+                # print(image)
                 img_h, img_w = image.size[0], image.size[1]
                 r_image = cyclegan.detect_image(image)
                 # ——————————————保存xml文件---------------------------#

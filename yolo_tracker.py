@@ -1,17 +1,7 @@
-import argparse
 import os
-import time
-from pathlib import Path
 import numpy as np
 from PIL import Image
 import cv2
-import torch
-import torch.backends.cudnn as cudnn
-from numpy import random
-from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages
-from utils.plots import plot_one_box
-from utils.torch_utils import time_synchronized, TracedModel
 import time
 from tracker.byte_tracker import BYTETracker
 from utils.visualize import plot_tracking
@@ -20,19 +10,15 @@ from tracking_utils.timer import Timer
 from yolo import YOLO
 
 
-def track_demo():
+def track_demo(yolo, video_path, video_save_path, video_fps, txt_dir):
     # ---------------------------------------------------------------------#
     #   tracker video setting
     # ---------------------------------------------------------------------#
-    video_path = "video/test_person.mp4"
-    video_save_path = "video/out.mp4"
-    video_fps = 30.0
-    txt_dir = "result"
     if not os.path.exists(txt_dir):
         os.makedirs(txt_dir)
 
     # print(deteted)
-    yolo = YOLO()
+    # yolo = YOLO()
     # Tracking
     track_thresh = 0.5
     track_buffer = 30
@@ -65,7 +51,7 @@ def track_demo():
             # ---------------------------------------------------------------------#
             #
             # ---------------------------------------------------------------------#
-            if np.array(dets).shape!=(0,):
+            if np.array(dets).shape != (0,):
                 online_targets = tracker.update(np.array(dets), [height, width], (height, width))
                 online_tlwhs = []
                 online_ids = []
@@ -89,7 +75,7 @@ def track_demo():
                 online_im = plot_tracking(im0, online_tlwhs, online_ids, frame_id=frame_id + 1, fps=1. / 1 / (t2 - t1))
                 with open(res_file, 'w') as f:
                     f.writelines(results)
-                if video_save_path!="":
+                if video_save_path != "":
                     out.write(online_im)
                 cv2.imshow("Frame", online_im)
 
@@ -103,7 +89,7 @@ def track_demo():
             if ch == ord("q"):
                 break
 
-            if ch==27:
+            if ch == 27:
                 cap.release()
                 break
         else:
@@ -111,4 +97,9 @@ def track_demo():
 
 
 if __name__ == "__main__":
-    track_demo()
+    yolo = YOLO()
+    video_path = "video/test_person.mp4"  # 跟踪视频
+    video_save_path = "video/out.mp4"  # 跟踪结果视频保存路径
+    video_fps = 30.0
+    txt_dir = "result"  # 跟踪结果报错路径
+    track_demo(yolo, video_path, video_save_path, video_fps, txt_dir)

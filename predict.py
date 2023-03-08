@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 
 from yolo import YOLO
+from yolo_tracker import track_demo
 
 if __name__ == "__main__":
     yolo = YOLO()
@@ -20,8 +21,9 @@ if __name__ == "__main__":
     #   'dir_predict'       表示遍历文件夹进行检测并保存。默认遍历img文件夹，保存img_out文件夹，详情查看下方注释。
     #   'heatmap'           表示进行预测结果的热力图可视化，详情查看下方注释。
     #   'export_onnx'       表示将模型导出为onnx，需要pytorch1.7.1以上。
+    #   'track'             表示调用ByteTrack实现目标跟踪
     #----------------------------------------------------------------------------------------------------------#
-    mode = "predict"
+    mode = "track"
     #-------------------------------------------------------------------------#
     #   crop                指定了是否在单张图片预测后对目标进行截取
     #   count               指定了是否进行目标的计数
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     #   test_interval和fps_image_path仅在mode='fps'有效
     #----------------------------------------------------------------------------------------------------------#
     test_interval   = 100
-    fps_image_path  = "img/street.jpg"# "VOCdevkit/VOC2007/JPEGImages/0000002_00005_d_0000014.jpg"
+    fps_image_path  = "img/street.jpg"
     #-------------------------------------------------------------------------#
     #   dir_origin_path     指定了用于检测的图片的文件夹路径
     #   dir_save_path       指定了检测完图片的保存路径
@@ -70,6 +72,16 @@ if __name__ == "__main__":
     #-------------------------------------------------------------------------#
     simplify        = True
     onnx_save_path  = "model_data/models.onnx"
+    # -------------------------------------------------------------------------#
+    #   track_video_path        跟踪视频
+    #   track_video_save_path   跟踪结果视频保存路径
+    #   track_video_fps         跟踪结果视频fps
+    #   txt_dir                 跟踪结果txt保存路径
+    # -------------------------------------------------------------------------#
+    track_video_path = "video/test_person.mp4"
+    track_video_save_path = "video/out.mp4"
+    track_video_fps = 30.0
+    txt_dir = "result"
 
     if mode == "predict":
         '''
@@ -171,6 +183,10 @@ if __name__ == "__main__":
                 
     elif mode == "export_onnx":
         yolo.convert_to_onnx(simplify, onnx_save_path)
-        
+
+    elif mode == "video":
+        track_demo(yolo, video_path, video_save_path, video_fps, txt_dir)
+
     else:
-        raise AssertionError("Please specify the correct mode: 'predict', 'video', 'fps', 'heatmap', 'export_onnx', 'dir_predict'.")
+        raise AssertionError("Please specify the correct mode: "
+                             "'predict', 'video', 'fps', 'heatmap', 'export_onnx', 'dir_predict', 'track'.")

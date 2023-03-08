@@ -508,4 +508,4 @@ class YoloBody(nn.Module):
         # ---------------------------------------------------#
         out0 = self.yolo_head_P5(P5)
 
-        return [out0, out1, out2]  # , sr_out
+        return [out0, out1, out2]

@@ -6,6 +6,7 @@ from tqdm import tqdm
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
+
 class SmallObjectAugmentation(object):
     def __init__(self, thresh=64*64, prob=None, copy_times=None, epochs=None, all_objects=False, one_object=False,img_1=None,annot_1=None,small_object_list=None,small_bbox=None,small_object=None):
         """
@@ -92,9 +93,6 @@ class SmallObjectAugmentation(object):
         :param img: 图片2（背景）
         :return:
         """
-        # cv2.imshow('inshow', img[annot[1]:annot[3], annot[0]:annot[2], :])
-        # cv2.waitKey(0)
-
         copy_annot = copy_annot.astype(np.int)
         try:
             image[ copy_annot[1]: copy_annot[3],  copy_annot[0]: copy_annot[2], :] = img
@@ -120,13 +118,11 @@ class SmallObjectAugmentation(object):
         return {'img_1': self.img_1, 'annot_1': np.array(annots_1)}
 
 
-def issmallobject(name,lower_thresh, hight_thresh, h, w):
-    if lower_thresh<= h * w <= hight_thresh and name=='gtz':
-        return True
-    elif 0*0<=h*w<=128*128 and name=='others':
-        return False
-    else :
-        return False
+def issmallobject(name,lower_thresh, hight_thresh, h, w,objects):
+    for i in range(0, len(objects)):
+        if lower_thresh<= h * w <= hight_thresh and name==objects[i]:
+            return True
+    return False
 
 
 def isnosmallobject( h, w):
@@ -136,7 +132,7 @@ def isnosmallobject( h, w):
         return False
 
 
-def read_xml(xml_path,image_name,rate_h,rate_w):
+def read_xml(xml_path,image_name,rate_h,rate_w,category):
     xmlfile1 = xml_path + r'/' + image_name[:-4] + '.xml'
     tree1 = ET.parse(xmlfile1)
     doc = xml.dom.minidom.Document()
@@ -151,15 +147,9 @@ def read_xml(xml_path,image_name,rate_h,rate_w):
                               int(float(bbox.find("ymin").text)*rate_h),
                               int(float(bbox.find("xmax").text)*rate_w),
                               int(float(bbox.find("ymax").text)*rate_h)]
-
-        if obj.find("name").text=='gtz':
-            object.append(1)
-        if obj.find("name").text == 'others':
-            object.append(2)
-        if obj.find("name").text == 'group':
-            object.append(3)
-        if obj.find("name").text == 'connection':
-            object.append(4)
+        for i in range(0,len(category)):
+            if obj.find("name").text==category[i]:
+                object.append(i)
         objects.append(object)
 
     objects=np.array(objects)
@@ -167,7 +157,7 @@ def read_xml(xml_path,image_name,rate_h,rate_w):
     return objects
 
 
-def add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,image_save_path,img_h, img_w):
+def add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,image_save_path,img_h, img_w,category):
     xmlfile1 = xml_path + r'/' + image_name[:-4] + '.xml'
     tree1 = ET.parse(xmlfile1)
     doc = xml.dom.minidom.Document()
@@ -205,6 +195,7 @@ def add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,imag
         size.appendChild(depth)
         root.appendChild(size)
 
+
     nodeframe = doc.createElement("frame")
     nodeframe.appendChild(doc.createTextNode(image_name[:-4] + '_3'))
 
@@ -212,15 +203,7 @@ def add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,imag
 
     for obj in add_object_xml:
         obj_struct = {}
-        # if obj[4]==1:
-        #     obj_struct["name"] = "gtz"
-        # elif obj[4]==2:
-        #     obj_struct["name"] = "others"
-        # elif obj[4]==3:
-        #     obj_struct["name"] = "group"
-        # elif obj[4]==4:
-        #     obj_struct["name"] = "connection"
-        obj_struct["name"] = "gtz"
+        obj_struct["name"] =category[int(obj[4])]
         obj_struct["pose"] = 'Unspecified'
         obj_struct["truncated"] = "0"
         obj_struct["difficult"] ="0"
@@ -268,13 +251,13 @@ def add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,imag
     fp.close()
 
 
-def collect_small_object(xml_path):
+def collect_small_object(xml_path,SOA_THRESH,Low_SOA_THRESH,category,objects):
     """
     目的：提取图片中所有小目标
     :param xml_path: xml地址
     :param rate_w: 缩放比例w
     :param rate_h: 缩放比例h
-    :return: 返回包含小目标的列表[xmin，ymin，xmax，ymax，1，文件名称]
+    :return: 返回包含小目标的列表【xmin，ymin，xmax，ymax，1，文件名称】
     """
     xmls = os.listdir(xml_path)
     small_objects = []
@@ -290,39 +273,32 @@ def collect_small_object(xml_path):
             bbox_h=int(float(bbox.find("ymax").text) )-int(float(bbox.find("ymin").text) )
             bbox_w=int(float(bbox.find("xmax").text) )-int(float(bbox.find("xmin").text))
             obj_name=obj.find("name").text
-            if obj_name=='gtz':
-                    small_object = [int(float(bbox.find("xmin").text) ),
+            if issmallobject(name=obj_name ,lower_thresh=Low_SOA_THRESH, hight_thresh=SOA_THRESH, h=bbox_h,w=bbox_w,objects=objects):
+                    small_object = [int(float(bbox.find("xmin").text)),
                               int(float(bbox.find("ymin").text)),
                               int(float(bbox.find("xmax").text) ),
                               int(float(bbox.find("ymax").text) )]
-                    if obj.find("name").text == 'gtz':
-                                small_object.append(1)
-                    else:
-                        small_object.append(0)
-                    # elif obj.find("name").text == 'others':
-                    #             small_object.append(2)
-                    # elif obj.find("name").text == 'group':
-                    #             small_object.append(3)
-                    # elif obj.find("name").text == 'connection':
-                    #             small_object.append(4)
+                    for i in range(0,len(category)):
+                        if obj.find("name").text == category[i]:
+                                small_object.append(i)
                     small_object.append(xml_name[:-4])
                     small_objects.append(small_object)
 
     return  small_objects
 
 
-def Samll_object_Augmentation(image_path, xml_path, image_save_path, xml_save_path,
-                              SOA_THRESH, SOA_PROB, SOA_COPY_TIMES, SOA_EPOCHS, Low_SOA_THRESH):
+def Samll_object_Augmentation(image_path,xml_path,image_save_path,xml_save_path,SOA_THRESH,
+                              SOA_PROB, SOA_COPY_TIMES, SOA_EPOCHS,Low_SOA_THRESH,category,objects):
     image_names = os.listdir(image_path)
     print('----------------------------')
     print('小目标数据增强')
 
     # c_w, c_h = 1294,458
-    c_w, c_h = 1920, 1080
-    small_object_list = collect_small_object(xml_path, SOA_THRESH ,Low_SOA_THRESH)
+    c_w, c_h = 1920,1080
+    small_object_list = collect_small_object(xml_path, SOA_THRESH ,Low_SOA_THRESH,category,objects)
     print(len(small_object_list))
     for image_name in tqdm(image_names):
-        # 图片1背景
+        #图片1背景
         img_1 = cv2.imread(os.path.join(image_path,image_name))
         h_1, w_1 = img_1.shape[0],img_1.shape[1]
         rate_h_1 = c_h/h_1
@@ -330,12 +306,11 @@ def Samll_object_Augmentation(image_path, xml_path, image_save_path, xml_save_pa
         img_1=cv2.resize(img_1,(c_w,c_h))
 
         SMB_image_name = 'smb_' +image_name
-        annot_1 = read_xml(xml_path, image_name,rate_h_1,rate_w_1)  # 读取所有的xml并且从新按比例划分
+        annot_1 = read_xml(xml_path, image_name,rate_h_1,rate_w_1,category)  # 读取所有的xml并且从新按比例划分
 
-        # 图片2提取小目标
-
+        #图片2提取小目标
         i = random.randint(0, len(small_object_list) - 1)
-        img_2= cv2.imread(os.path.join(image_path, small_object_list[i][5]+'.jpg'))
+        img_2= cv2.imread(os.path.join(image_path,small_object_list[i][5]+'.jpg'))
 
         h_2, w_2= img_2.shape[0],img_2.shape[1]
 
@@ -359,15 +334,20 @@ def Samll_object_Augmentation(image_path, xml_path, image_save_path, xml_save_pa
             img_2 = cv2.resize(img_2, (c_w, c_h))
             small_object = img_2[small_bbox[1]:small_bbox[3], small_bbox[0]:small_bbox[2], :]
 
-        augmenter = SmallObjectAugmentation(SOA_THRESH, SOA_PROB, SOA_COPY_TIMES, SOA_EPOCHS,img_1=img_1,annot_1=annot_1,small_object_list=small_object_list,small_bbox=small_bbox,small_object=small_object)
 
-        Sample={"img_1":img_1, "annot_1":annot_1}
+        augmenter = SmallObjectAugmentation(SOA_THRESH, SOA_PROB, SOA_COPY_TIMES,
+                                            SOA_EPOCHS,img_1=img_1,annot_1=annot_1,small_object_list=small_object_list,
+                                            small_bbox=small_bbox,small_object=small_object)
+
+        Sample={"img_1":img_1,"annot_1":annot_1}
         new_Sample= augmenter.__call__(Sample)
+
 
         add_object_xml=new_Sample['annot_1']
         img_h, img_w = new_Sample['img_1'].shape[0], new_Sample['img_1'].shape[1]
 
-        add_xml(xml_path, image_name, xml_save_path, add_object_xml, SMB_image_name, image_save_path, img_h, img_w)
+        add_xml(xml_path,image_name,xml_save_path,add_object_xml,SMB_image_name,image_save_path,img_h, img_w,category)
+
 
         if not os.path.exists(image_save_path):
             os.makedirs(image_save_path)

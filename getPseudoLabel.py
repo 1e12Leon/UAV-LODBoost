@@ -36,10 +36,6 @@ def Coordinate2XML(imagepath, outputxmlpath, dets, folder):
         # txt中的第一条information在写入xml时，负责将img_name、size、object写入；其余的information只写object
         if i == 0:
             lable = det[5]
-            """xmin = int(float(det[1])) - 1
-            ymin = int(float(det[0])) - 1
-            xmax = int(float(det[3])) + 1 + xmin + 1
-            ymax = int(float(det[2])) + 1 + ymin + 1"""
             xmin = det[1]
             ymin = det[0]
             xmax = det[3]
@@ -75,7 +71,6 @@ def Coordinate2XML(imagepath, outputxmlpath, dets, folder):
             bndbox_xmax.text = str(xmax)
             bndbox_ymax = ET.SubElement(bndbox, 'ymax')
             bndbox_ymax.text = str(ymax)
-            # 如果重复，则需要添加object框
 
         else:
             lable = det[5]
