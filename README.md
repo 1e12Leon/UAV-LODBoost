@@ -2,6 +2,8 @@
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
+这个仓库将包含但不限于以下功能：
+
 1. 一套**目标检测数据增强与扩充**代码。
 2. 一种**样本筛选**方法。
 3. 一套**目标检测与跟踪**模型。
