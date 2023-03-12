@@ -1,4 +1,4 @@
-# 标准 Readme
+# YOLO FRAMEWORK
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
@@ -41,7 +41,7 @@
 ### 数据处理
 
 1. 数据集增强与扩充
-   准备voc格式数据集，coco、yolo等格式数据可在data_process中做格式转换。
+   准备voc格式数据集，coco、yolo等格式数据使用data_process文件夹下的代码做格式转换。
    修改Augment.py中的相关路径，选择增强方式（默认全选）。
    修改增强相关参数。
    运行Augment.py。
@@ -54,7 +54,7 @@
 ### YOLO训练步骤
 
 1. 数据集的准备  
-**本文使用VOC格式进行训练，训练前需要自己制作好数据集，**    
+**本文使用VOC格式进行训练，训练前需要自己制作好数据集，** coco、yolo等格式数据使用data_process文件夹下的代码做格式转换   
 训练前将标签文件放在VOCdevkit文件夹下的VOC2007文件夹下的Annotation中。   
 训练前将图片文件放在VOCdevkit文件夹下的VOC2007文件夹下的JPEGImages中。   
 
@@ -63,7 +63,7 @@
 修改voc_annotation.py里面的参数。第一次训练可以仅修改classes_path，classes_path用于指向检测类别所对应的txt。   
 训练自己的数据集时，可以自己建立一个cls_classes.txt，里面写自己所需要区分的类别。   
 model_data/cls_classes.txt文件内容为：      
-```python
+```
 cat
 dog
 ...
@@ -133,7 +133,7 @@ _defaults = {
 }
 ```
 3. 运行predict.py，输入  
-```python
+```
 img/street.jpg
 ```
 4. 在predict.py里面进行设置可以进行fps测试和video视频检测。  
@@ -152,9 +152,9 @@ img/street.jpg
 ## 相关仓库
 
 - [Art of Readme](https://github.com/noffle/art-of-readme)
-- [Classification-pytorch by bubbliiiing](https://github.com/bubbliiiing/classification-pytorch/)
-
-
+- [Classification by bubbliiiing](https://github.com/bubbliiiing/classification-pytorch/)
+- [YOLOv7 by bubbliiiing](https://github.com/bubbliiiing/yolov7-pytorch)
+- [ByteTrack](https://github.com/ifzhang/ByteTrack)
 
 ## 维护者
 
