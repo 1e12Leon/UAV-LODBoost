@@ -107,7 +107,7 @@ def Coordinate2XML(imagepath, outputxmlpath, dets, folder):
 
 
 if __name__ == '__main__':
-    threshold = 0.2
+    # threshold = 0.2
     yolo = YOLO()
     imgs_path = 'Semi-Supervised/JPEGImages'
     outputxmlpath = 'Semi-Supervised/Annotations'

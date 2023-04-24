@@ -10,6 +10,7 @@ from PIL import Image
 
 from yolo import YOLO
 from yolo_tracker import track_demo
+from botSort_tracker import botsort_demo
 
 if __name__ == "__main__":
     yolo = YOLO()
@@ -184,8 +185,11 @@ if __name__ == "__main__":
     elif mode == "export_onnx":
         yolo.convert_to_onnx(simplify, onnx_save_path)
 
-    elif mode == "video":
+    elif mode == "bytetrack":
         track_demo(yolo, video_path, video_save_path, video_fps, txt_dir)
+
+    elif mode == "botsort":
+        botsort_demo(yolo, video_path, video_save_path, video_fps)
 
     else:
         raise AssertionError("Please specify the correct mode: "

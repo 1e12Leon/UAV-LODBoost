@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import cv2
 import time
-from tracker.byte_tracker import BYTETracker
+from ByteTrack_tracker.byte_tracker import BYTETracker
 from utils.visualize import plot_tracking
 from tracking_utils.timer import Timer
 
@@ -12,7 +12,7 @@ from yolo import YOLO
 
 def track_demo(yolo, video_path, video_save_path, video_fps, txt_dir):
     # ---------------------------------------------------------------------#
-    #   tracker video setting
+    #   ByteTrack_tracker video setting
     # ---------------------------------------------------------------------#
     if not os.path.exists(txt_dir):
         os.makedirs(txt_dir)
