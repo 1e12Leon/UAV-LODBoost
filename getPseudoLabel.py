@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 from PIL import Image
 import os
+
+from tqdm import tqdm
+
 from yolo import YOLO
 import xml.etree.ElementTree as ET
 
@@ -113,7 +116,7 @@ if __name__ == '__main__':
     outputxmlpath = 'Semi-Supervised/Annotations'
     folder = 'JPEGImages'
     img_list = os.listdir(imgs_path)
-    for img in img_list:
+    for img in tqdm(img_list):
         img = os.path.join(imgs_path, img)
         try:
             image = Image.open(img)

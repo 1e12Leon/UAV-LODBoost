@@ -5,10 +5,10 @@ import xml.etree.ElementTree as ET
 import shutil
 
 #根据自己的情况修改相应的路径
-ann_filepath = 'VOCdevkit/VisDrone2019-DET-train/Annotations/'
-img_filepath = 'VOCdevkit/VisDrone2019-DET-train/JPEGImages/'
-img_savepath = 'VOCdevkit/VisDrone2019-DET-train/JPEGImages4/'
-ann_savepath = 'VOCdevkit/VisDrone2019-DET-train/Annotations4/'
+ann_filepath = 'D:\BaiduNetdiskDownload\VisDrone2019-DET-test-dev\Annotations/'
+img_filepath = 'D:\BaiduNetdiskDownload\VisDrone2019-DET-test-dev\images/'
+img_savepath = 'D:\BaiduNetdiskDownload\VisDrone2019-DET-test-dev\JPEGImages-car/'
+ann_savepath = 'D:\BaiduNetdiskDownload\VisDrone2019-DET-test-dev\Annotations-car/'
 if not os.path.exists(img_savepath):
     os.mkdir(img_savepath)
 
@@ -21,7 +21,7 @@ if not os.path.exists(ann_savepath):
 #              'dog', 'horse', 'motorbike', 'pottedplant',
 #           'sheep', 'sofa', 'train', 'person','tvmonitor']
 
-classes = ['pedestrian', 'bicycle', 'car', 'van']    #这里是需要提取的类别
+classes = ['car']    #这里是需要提取的类别
 # ["Human", "Car", "Truck", "Van", "Motorbike", "Bicycle", "Bus", "Trailer"]
 def save_annotation(file):
     tree = ET.parse(ann_filepath + '/' + file)
