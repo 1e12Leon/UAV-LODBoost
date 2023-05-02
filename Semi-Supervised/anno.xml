@@ -1,0 +1,15 @@
+<annotation>
+	<folder>JPEGImages</folder>
+	<filename>cars2.jpg</filename>
+	<path>Semi-Supervised/JPEGImages/cars2.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>500</width>
+		<height>333</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	
+</annotation>

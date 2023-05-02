@@ -1,0 +1,3 @@
+pedestrian
+people
+bicycle
