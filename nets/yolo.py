@@ -349,7 +349,7 @@ class SRModule(nn.Module):
 #   yolo_body
 # ---------------------------------------------------#
 class YoloBody(nn.Module):
-    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=1):
+    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=1,pruned=1):
         super(YoloBody, self).__init__()
         # -----------------------------------------------#
         #   定义了不同yolov7版本的参数
@@ -372,36 +372,46 @@ class YoloBody(nn.Module):
         #   40, 40, 1024
         #   20, 20, 1024
         # ---------------------------------------------------#
-        self.backbone = Backbone(transition_channels, block_channels, n, phi, pretrained=pretrained)
+        self.backbone = Backbone(transition_channels, block_channels * pruned, n, phi, pretrained=pretrained,
+                                 pruned=pruned)
 
         self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
 
-        self.sppcspc = SPPCSPC(transition_channels * 32, transition_channels * 16)
-        self.conv_for_P5 = Conv(transition_channels * 16, transition_channels * 8)
-        self.conv_for_feat2 = Conv(transition_channels * 32, transition_channels * 8)
-        self.conv3_for_upsample1 = Block(transition_channels * 16, panet_channels * 4, transition_channels * 8, e=e,
+        self.sppcspc = SPPCSPC(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned))
+        self.conv_for_P5 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned))
+        self.conv_for_feat2 = Conv(int(transition_channels * 32 * pruned), int(transition_channels * 8 * pruned))
+        self.conv3_for_upsample1 = Block(int(transition_channels * 16 * pruned), int(transition_channels * 4 * pruned),
+                                         int(transition_channels * 8 * pruned), e=e,
                                          n=n, ids=ids)
 
-        self.conv_for_P4 = Conv(transition_channels * 8, transition_channels * 4)
-        self.conv_for_feat1 = Conv(transition_channels * 16, transition_channels * 4)
-        self.conv3_for_upsample2 = Block(transition_channels * 8, panet_channels * 2, transition_channels * 4, e=e, n=n,
+        self.conv_for_P4 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned))
+        self.conv_for_feat1 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 4 * pruned))
+        self.conv3_for_upsample2 = Block(int(transition_channels * 8 * pruned), int(transition_channels * 2 * pruned),
+                                         int(transition_channels * 4 * pruned), e=e, n=n,
                                          ids=ids)
 
-        self.down_sample1 = Transition(transition_channels * 4, transition_channels * 4)
-        self.conv3_for_downsample1 = Block(transition_channels * 16, panet_channels * 4, transition_channels * 8, e=e,
+        self.down_sample1 = Transition(int(transition_channels * 4 * pruned), int(transition_channels * 4 * pruned))
+        self.conv3_for_downsample1 = Block(int(transition_channels * 16 * pruned),
+                                           int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned),
+                                           e=e,
                                            n=n, ids=ids)
 
-        self.down_sample2 = Transition(transition_channels * 8, transition_channels * 8)
-        self.conv3_for_downsample2 = Block(transition_channels * 32, panet_channels * 8, transition_channels * 16, e=e,
+        self.down_sample2 = Transition(int(transition_channels * 8 * pruned), int(transition_channels * 8 * pruned))
+        self.conv3_for_downsample2 = Block(int(transition_channels * 32 * pruned),
+                                           int(transition_channels * 8 * pruned),
+                                           int(transition_channels * 16 * pruned), e=e,
                                            n=n, ids=ids)
 
-        self.rep_conv_1 = conv(transition_channels * 4, transition_channels * 8, 3, 1)
-        self.rep_conv_2 = conv(transition_channels * 8, transition_channels * 16, 3, 1)
-        self.rep_conv_3 = conv(transition_channels * 16, transition_channels * 32, 3, 1)
+        self.rep_conv_1 = conv(int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned), 3, 1)
+        self.rep_conv_2 = conv(int(transition_channels * 8 * pruned), int(transition_channels * 16 * pruned), 3, 1)
+        self.rep_conv_3 = conv(int(transition_channels * 16 * pruned), int(transition_channels * 32 * pruned), 3, 1)
 
-        self.yolo_head_P3 = nn.Conv2d(transition_channels * 8, len(anchors_mask[2]) * (5 + num_classes), 1)
-        self.yolo_head_P4 = nn.Conv2d(transition_channels * 16, len(anchors_mask[1]) * (5 + num_classes), 1)
-        self.yolo_head_P5 = nn.Conv2d(transition_channels * 32, len(anchors_mask[0]) * (5 + num_classes), 1)
+        self.yolo_head_P3 = nn.Conv2d(int(transition_channels * 8 * pruned), len(anchors_mask[2]) * (5 + num_classes),
+                                      1)
+        self.yolo_head_P4 = nn.Conv2d(int(transition_channels * 16 * pruned), len(anchors_mask[1]) * (5 + num_classes),
+                                      1)
+        self.yolo_head_P5 = nn.Conv2d(int(transition_channels * 32 * pruned), len(anchors_mask[0]) * (5 + num_classes),
+                                      1)
         self.phi_attention = phi_attention
         # self.reshape5 = reshapeP5()
         # self.reshape4 = reshapeP4()
@@ -411,9 +421,9 @@ class YoloBody(nn.Module):
 
         if phi_attention >= 1 and phi_attention <= 3:
             # self.feat1_attention = attention_bocks[phi_attention - 1](512)
-            self.P3_attention = attention_bocks[phi_attention - 1](128)
-            self.P4_attention = attention_bocks[phi_attention - 1](256)
-            self.P5_attention = attention_bocks[phi_attention - 1](512)
+            self.P3_attention = attention_bocks[phi_attention - 1](int(128 * pruned))
+            self.P4_attention = attention_bocks[phi_attention - 1](int(256 * pruned))
+            self.P5_attention = attention_bocks[phi_attention - 1](int(512 * pruned))
             # self.feat2_attention = attention_bocks[phi_attention - 1](1024)
             # self.feat3_attention = attention_bocks[phi_attention - 1](1024)
 

@@ -77,7 +77,7 @@ class Transition(nn.Module):
         return torch.cat([x_2, x_1], 1)
     
 class Backbone(nn.Module):
-    def __init__(self, transition_channels, block_channels, n, phi, pretrained=False):
+    def __init__(self, transition_channels, block_channels, n, phi, pretrained=False,pruned=1):
         super().__init__()
         #-----------------------------------------------#
         #   输入图片是640, 640, 3
@@ -87,25 +87,29 @@ class Backbone(nn.Module):
             'x' : [-1, -3, -5, -7, -8], 
         }[phi]
         self.stem = nn.Sequential(
-            Conv(3, transition_channels, 3, 1),
-            Conv(transition_channels, transition_channels * 2, 3, 2),
-            Conv(transition_channels * 2, transition_channels * 2, 3, 1),
+            Conv(3, int(transition_channels * pruned), 3, 1),
+            Conv(int(transition_channels * pruned), int(transition_channels * 2 * pruned), 3, 2),
+            Conv(int(transition_channels * 2 * pruned), int(transition_channels * 2 * pruned), 3, 1),
         )
         self.dark2 = nn.Sequential(
-            Conv(transition_channels * 2, transition_channels * 4, 3, 2),
-            Block(transition_channels * 4, block_channels * 2, transition_channels * 8, n=n, ids=ids),
+            Conv(int(transition_channels * 2 * pruned), int(transition_channels * 4 * pruned), 3, 2),
+            Block(int(transition_channels * 4 * pruned), int(transition_channels * 2 * pruned),
+                  int(transition_channels * 8 * pruned), n=n, ids=ids),
         )
         self.dark3 = nn.Sequential(
-            Transition(transition_channels * 8, transition_channels * 4),
-            Block(transition_channels * 8, block_channels * 4, transition_channels * 16, n=n, ids=ids),
+            Transition(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned)),
+            Block(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned),
+                  int(transition_channels * 16 * pruned), n=n, ids=ids),
         )
         self.dark4 = nn.Sequential(
-            Transition(transition_channels * 16, transition_channels * 8),
-            Block(transition_channels * 16, block_channels * 8, transition_channels * 32, n=n, ids=ids),
+            Transition(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned)),
+            Block(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned),
+                  int(transition_channels * 32 * pruned), n=n, ids=ids),
         )
         self.dark5 = nn.Sequential(
-            Transition(transition_channels * 32, transition_channels * 16),
-            Block(transition_channels * 32, block_channels * 8, transition_channels * 32, n=n, ids=ids),
+            Transition(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned)),
+            Block(int(transition_channels * 32 * pruned), int(transition_channels * 8 * pruned),
+                  int(transition_channels * 32 * pruned), n=n, ids=ids),
         )
         
         if pretrained:
