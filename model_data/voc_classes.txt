@@ -1,3 +1,0 @@
-pedestrian
-people
-bicycle
