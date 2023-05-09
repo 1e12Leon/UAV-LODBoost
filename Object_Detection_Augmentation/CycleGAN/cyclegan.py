@@ -4,8 +4,8 @@ import torch
 from PIL import Image
 from torch import nn
 
-from Object_Detection_Augmentation.CycleGAN.nets.cyclegan import generator
-from Object_Detection_Augmentation.CycleGAN.utils.utils import (cvtColor, postprocess_output, preprocess_input,
+from CycleGAN.nets.cyclegan import generator
+from CycleGAN.utils.utils import (cvtColor, postprocess_output, preprocess_input,
                          resize_image, show_config)
 
 

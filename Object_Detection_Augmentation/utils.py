@@ -40,8 +40,6 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized, r
 
 
-
-
 def plot_bboxes(img, targets):
     names = ['gtz', 'others', 'group','connection']
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]

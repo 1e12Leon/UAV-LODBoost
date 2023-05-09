@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from Object_Detection_Augmentation.CycleGAN.cyclegan import CYCLEGAN
+from cyclegan import CYCLEGAN
 import xml.etree.ElementTree as ET
 import os
 import xml.dom.minidom

@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import random
 
-from Object_Detection_Augmentation.utils import image_resize, plot_bboxes,read_xml,add_xml
+from utils import image_resize, plot_bboxes,read_xml,add_xml
 
 
 def cutmix(image, boxes, r_image, r_boxes):
