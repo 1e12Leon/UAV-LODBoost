@@ -4,7 +4,7 @@ from PIL import Image
 import os
 
 from tqdm import tqdm
-
+import argparse
 from yolo import YOLO
 import xml.etree.ElementTree as ET
 
@@ -110,11 +110,27 @@ def Coordinate2XML(imagepath, outputxmlpath, dets, folder):
 
 
 if __name__ == '__main__':
+    #-------------------------------------------------------#
+    #   一键式半监督自训练：
+    #   1. 准备未标注图像，放在imgs_path目录下
+    #   2. 运行getPseudoLabel.py
+    #   3. 运行merge_data.py合并目标域数据和源域数据
+    #   4. 运行train.py
+    #-------------------------------------------------------#
     # threshold = 0.2
     yolo = YOLO()
-    imgs_path = 'Semi-Supervised/JPEGImages'
-    outputxmlpath = 'Semi-Supervised/Annotations'
+    # 定义命令行解析器对象
+    parser = argparse.ArgumentParser(description='Arguments of Semi-supervised and Self-training')
+    # 添加命令行参数
+    parser.add_argument('--imgs_path', type=str, default='Semi-Supervised/JPEGImages')
+    parser.add_argument('--output_xmlpath', type=str, default='Semi-Supervised/Annotations')
+    # 从命令行中结构化解析参数
+    args = parser.parse_args()
+
+    imgs_path = args.imgs_path
+    output_xmlpath = args.output_xmlpath
     folder = 'JPEGImages'
+
     img_list = os.listdir(imgs_path)
     for img in tqdm(img_list):
         img = os.path.join(imgs_path, img)
@@ -124,4 +140,4 @@ if __name__ == '__main__':
             print('Open Error! Try again!')
         else:
             dets = yolo.detect_image_pseudo_label(image)
-            Coordinate2XML(img, outputxmlpath, dets, folder)
+            Coordinate2XML(img, output_xmlpath, dets, folder)
