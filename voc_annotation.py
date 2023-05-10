@@ -60,7 +60,8 @@ def convert_annotation(year, image_id, list_file):
         list_file.write(" " + ",".join([str(a) for a in b]) + ',' + str(cls_id))
         
         nums[classes.index(cls)] = nums[classes.index(cls)] + 1
-        
+
+
 if __name__ == "__main__":
     random.seed(0)
     if " " in os.path.abspath(VOCdevkit_path):
