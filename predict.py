@@ -9,8 +9,8 @@ import numpy as np
 from PIL import Image
 
 from yolo import YOLO
-from yolo_tracker import track_demo
-from botSort_tracker import botsort_demo
+# from yolo_tracker import track_demo
+# from botSort_tracker import botsort_demo
 
 if __name__ == "__main__":
     yolo = YOLO()
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     #   'bytetrack'         表示调用ByteTrack实现目标跟踪
     #   'botsort'           表示调用BotSort实现目标跟踪
     #----------------------------------------------------------------------------------------------------------#
-    mode = "track"
+    mode = "predict"
     #-------------------------------------------------------------------------#
     #   crop                指定了是否在单张图片预测后对目标进行截取
     #   count               指定了是否进行目标的计数
@@ -187,10 +187,12 @@ if __name__ == "__main__":
         yolo.convert_to_onnx(simplify, onnx_save_path)
 
     elif mode == "bytetrack":
-        track_demo(yolo, video_path, video_save_path, video_fps, txt_dir)
+        pass
+        # track_demo(yolo, video_path, video_save_path, video_fps, txt_dir)
 
     elif mode == "botsort":
-        botsort_demo(yolo, video_path, video_save_path, video_fps)
+        pass
+        # botsort_demo(yolo, video_path, video_save_path, video_fps)
 
     else:
         raise AssertionError("Please specify the correct mode: "

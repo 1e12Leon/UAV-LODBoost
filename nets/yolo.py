@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torchvision.transforms import Resize
-from nets.backbone import Backbone, Block, Conv, SiLU, Transition, autopad
+from nets.backbone import Backbone, Multi_Concat_Block, Conv, SiLU, Transition_Block, autopad, tinyBackbone
 from utils.attentions import se_block, cbam_block, eca_block, EPSABlock, PSAModule
 
 attention_bocks = [se_block, cbam_block, eca_block, PSAModule]
@@ -27,6 +27,23 @@ class SPPCSPC(nn.Module):
         y1 = self.cv6(self.cv5(torch.cat([x1] + [m(x1) for m in self.m], 1)))
         y2 = self.cv2(x)
         return self.cv7(torch.cat((y1, y2), dim=1))
+
+class tinySPPCSPC(nn.Module):
+    # CSP https://github.com/WongKinYiu/CrossStagePartialNetworks
+    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5, k=(13, 9, 5)):
+        super(tinySPPCSPC, self).__init__()
+        c_ = int(2 * c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.m = nn.ModuleList([nn.MaxPool2d(kernel_size=x, stride=1, padding=x // 2) for x in k])
+        self.cv3 = Conv(4 * c_, c_, 1, 1)
+        self.cv4 = Conv(2 * c_, c2, 1, 1)
+
+    def forward(self, x):
+        x1 = self.cv1(x)
+        y1 = self.cv3(torch.cat([m(x1) for m in self.m] + [x1], 1))
+        y2 = self.cv2(x)
+        return self.cv4(torch.cat((y1, y2), dim=1))
 
 
 class RepConv(nn.Module):
@@ -349,18 +366,18 @@ class SRModule(nn.Module):
 #   yolo_body
 # ---------------------------------------------------#
 class YoloBody(nn.Module):
-    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=1,pruned=1):
+    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=1, pruned=1):
         super(YoloBody, self).__init__()
         # -----------------------------------------------#
         #   定义了不同yolov7版本的参数
         # -----------------------------------------------#
-        transition_channels = {'l': 32, 'x': 40}[phi]
-        block_channels = 32
-        panet_channels = {'l': 32, 'x': 64}[phi]
-        e = {'l': 2, 'x': 1}[phi]
-        n = {'l': 4, 'x': 6}[phi]
-        ids = {'l': [-1, -2, -3, -4, -5, -6], 'x': [-1, -3, -5, -7, -8]}[phi]
-        conv = {'l': RepConv, 'x': Conv}[phi]
+        transition_channels = {'l': 32, 'x': 40, 'tiny': 16}[phi]
+        block_channels = {'l': 32, 'x': 32, 'tiny': 16}[phi]
+        panet_channels = {'l': 32, 'x': 64, 'tiny': 16}[phi]
+        e = {'l': 2, 'x': 1, 'tiny': 1}[phi]
+        n = {'l': 4, 'x': 6, 'tiny': 2}[phi]
+        ids = {'l': [-1, -2, -3, -4, -5, -6], 'x': [-1, -3, -5, -7, -8], 'tiny': [-1, -2, -3, -4]}[phi]
+        conv = {'l': RepConv, 'x': Conv, 'tiny': Conv}[phi]
         # -----------------------------------------------#
         #   输入图片是640, 640, 3
         # -----------------------------------------------#
@@ -372,54 +389,93 @@ class YoloBody(nn.Module):
         #   40, 40, 1024
         #   20, 20, 1024
         # ---------------------------------------------------#
-        self.backbone = Backbone(transition_channels, block_channels * pruned, n, phi, pretrained=pretrained,
-                                 pruned=pruned)
+        if phi == 'tiny':
 
-        self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
+            self.backbone = tinyBackbone(transition_channels, block_channels, n, pretrained=pretrained)
 
-        self.sppcspc = SPPCSPC(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned))
-        self.conv_for_P5 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned))
-        self.conv_for_feat2 = Conv(int(transition_channels * 32 * pruned), int(transition_channels * 8 * pruned))
-        self.conv3_for_upsample1 = Block(int(transition_channels * 16 * pruned), int(transition_channels * 4 * pruned),
-                                         int(transition_channels * 8 * pruned), e=e,
-                                         n=n, ids=ids)
+            self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
 
-        self.conv_for_P4 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned))
-        self.conv_for_feat1 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 4 * pruned))
-        self.conv3_for_upsample2 = Block(int(transition_channels * 8 * pruned), int(transition_channels * 2 * pruned),
-                                         int(transition_channels * 4 * pruned), e=e, n=n,
-                                         ids=ids)
+            self.sppcspc = tinySPPCSPC(transition_channels * 32, transition_channels * 16)
+            self.conv_for_P5 = Conv(transition_channels * 16, transition_channels * 8)
+            self.conv_for_feat2 = Conv(transition_channels * 16, transition_channels * 8)
+            self.conv3_for_upsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
+                                                          transition_channels * 8, e=e, n=n, ids=ids)
 
-        self.down_sample1 = Transition(int(transition_channels * 4 * pruned), int(transition_channels * 4 * pruned))
-        self.conv3_for_downsample1 = Block(int(transition_channels * 16 * pruned),
-                                           int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned),
-                                           e=e,
-                                           n=n, ids=ids)
+            self.conv_for_P4 = Conv(transition_channels * 8, transition_channels * 4)
+            self.conv_for_feat1 = Conv(transition_channels * 8, transition_channels * 4)
+            self.conv3_for_upsample2 = Multi_Concat_Block(transition_channels * 8, panet_channels * 2,
+                                                          transition_channels * 4, e=e, n=n, ids=ids)
 
-        self.down_sample2 = Transition(int(transition_channels * 8 * pruned), int(transition_channels * 8 * pruned))
-        self.conv3_for_downsample2 = Block(int(transition_channels * 32 * pruned),
-                                           int(transition_channels * 8 * pruned),
-                                           int(transition_channels * 16 * pruned), e=e,
-                                           n=n, ids=ids)
+            self.down_sample1 = Conv(transition_channels * 4, transition_channels * 8, k=3, s=2)
+            self.conv3_for_downsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
+                                                            transition_channels * 8, e=e, n=n, ids=ids)
 
-        self.rep_conv_1 = conv(int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned), 3, 1)
-        self.rep_conv_2 = conv(int(transition_channels * 8 * pruned), int(transition_channels * 16 * pruned), 3, 1)
-        self.rep_conv_3 = conv(int(transition_channels * 16 * pruned), int(transition_channels * 32 * pruned), 3, 1)
+            self.down_sample2 = Conv(transition_channels * 8, transition_channels * 16, k=3, s=2)
+            self.conv3_for_downsample2 = Multi_Concat_Block(transition_channels * 32, panet_channels * 8,
+                                                            transition_channels * 16, e=e, n=n, ids=ids)
 
-        self.yolo_head_P3 = nn.Conv2d(int(transition_channels * 8 * pruned), len(anchors_mask[2]) * (5 + num_classes),
-                                      1)
-        self.yolo_head_P4 = nn.Conv2d(int(transition_channels * 16 * pruned), len(anchors_mask[1]) * (5 + num_classes),
-                                      1)
-        self.yolo_head_P5 = nn.Conv2d(int(transition_channels * 32 * pruned), len(anchors_mask[0]) * (5 + num_classes),
-                                      1)
-        self.phi_attention = phi_attention
-        # self.reshape5 = reshapeP5()
-        # self.reshape4 = reshapeP4()
-        # self.scale_sequence = ssFPN(c_in=384, c_out=128)
-        # self.scale_sequence = scaleSequence()
-        # self.sr = SRModule(c_in_low=512)
+            self.rep_conv_1 = Conv(transition_channels * 4, transition_channels * 8, 3, 1)
+            self.rep_conv_2 = Conv(transition_channels * 8, transition_channels * 16, 3, 1)
+            self.rep_conv_3 = Conv(transition_channels * 16, transition_channels * 32, 3, 1)
 
-        if phi_attention >= 1 and phi_attention <= 3:
+            self.yolo_head_P3 = nn.Conv2d(transition_channels * 8, len(anchors_mask[2]) * (5 + num_classes), 1)
+            self.yolo_head_P4 = nn.Conv2d(transition_channels * 16, len(anchors_mask[1]) * (5 + num_classes), 1)
+            self.yolo_head_P5 = nn.Conv2d(transition_channels * 32, len(anchors_mask[0]) * (5 + num_classes), 1)
+
+        else:
+
+            self.backbone = Backbone(transition_channels, block_channels, n, phi, pretrained=pretrained)
+
+            # ------------------------加强特征提取网络------------------------#
+            self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
+
+            # 20, 20, 1024 => 20, 20, 512
+            self.sppcspc = SPPCSPC(transition_channels * 32, transition_channels * 16)
+            # 20, 20, 512 => 20, 20, 256 => 40, 40, 256
+            self.conv_for_P5 = Conv(transition_channels * 16, transition_channels * 8)
+            # 40, 40, 1024 => 40, 40, 256
+            self.conv_for_feat2 = Conv(transition_channels * 32, transition_channels * 8)
+            # 40, 40, 512 => 40, 40, 256
+            self.conv3_for_upsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
+                                                          transition_channels * 8, e=e, n=n, ids=ids)
+
+            # 40, 40, 256 => 40, 40, 128 => 80, 80, 128
+            self.conv_for_P4 = Conv(transition_channels * 8, transition_channels * 4)
+            # 80, 80, 512 => 80, 80, 128
+            self.conv_for_feat1 = Conv(transition_channels * 16, transition_channels * 4)
+            # 80, 80, 256 => 80, 80, 128
+            self.conv3_for_upsample2 = Multi_Concat_Block(transition_channels * 8, panet_channels * 2,
+                                                          transition_channels * 4, e=e, n=n, ids=ids)
+
+            # 80, 80, 128 => 40, 40, 256
+            self.down_sample1 = Transition_Block(transition_channels * 4, transition_channels * 4)
+            # 40, 40, 512 => 40, 40, 256
+            self.conv3_for_downsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
+                                                            transition_channels * 8, e=e, n=n, ids=ids)
+
+            # 40, 40, 256 => 20, 20, 512
+            self.down_sample2 = Transition_Block(transition_channels * 8, transition_channels * 8)
+            # 20, 20, 1024 => 20, 20, 512
+            self.conv3_for_downsample2 = Multi_Concat_Block(transition_channels * 32, panet_channels * 8,
+                                                            transition_channels * 16, e=e, n=n, ids=ids)
+            # ------------------------加强特征提取网络------------------------#
+
+            # 80, 80, 128 => 80, 80, 256
+            self.rep_conv_1 = conv(transition_channels * 4, transition_channels * 8, 3, 1)
+            # 40, 40, 256 => 40, 40, 512
+            self.rep_conv_2 = conv(transition_channels * 8, transition_channels * 16, 3, 1)
+            # 20, 20, 512 => 20, 20, 1024
+            self.rep_conv_3 = conv(transition_channels * 16, transition_channels * 32, 3, 1)
+
+            # 4 + 1 + num_classes
+            # 80, 80, 256 => 80, 80, 3 * 25 (4 + 1 + 20) & 85 (4 + 1 + 80)
+            self.yolo_head_P3 = nn.Conv2d(transition_channels * 8, len(anchors_mask[2]) * (5 + num_classes), 1)
+            # 40, 40, 512 => 40, 40, 3 * 25 & 85
+            self.yolo_head_P4 = nn.Conv2d(transition_channels * 16, len(anchors_mask[1]) * (5 + num_classes), 1)
+            # 20, 20, 512 => 20, 20, 3 * 25 & 85
+            self.yolo_head_P5 = nn.Conv2d(transition_channels * 32, len(anchors_mask[0]) * (5 + num_classes), 1)
+
+        """if phi_attention >= 1 and phi_attention <= 3:
             # self.feat1_attention = attention_bocks[phi_attention - 1](512)
             self.P3_attention = attention_bocks[phi_attention - 1](int(128 * pruned))
             self.P4_attention = attention_bocks[phi_attention - 1](int(256 * pruned))
@@ -430,7 +486,7 @@ class YoloBody(nn.Module):
         if phi_attention == 4:
             self.P3_attention = attention_bocks[phi_attention - 1](256, 256)
             self.P4_attention = attention_bocks[phi_attention - 1](256, 256)
-            self.P5_attention = attention_bocks[phi_attention - 1](512, 512)
+            self.P5_attention = attention_bocks[phi_attention - 1](512, 512)"""
 
     def fuse(self):
         print('Fusing layers... ')
@@ -445,59 +501,47 @@ class YoloBody(nn.Module):
 
     def forward(self, x):
         #  backbone
+
         feat1, feat2, feat3 = self.backbone.forward(x)
-        # print(feat1.shape)
-        # if self.phi_attention >= 1 and self.phi_attention <= 3:
-        # feat1 = self.feat1_attention(feat1)
-        # feat2 = self.feat2_attention(feat2)
 
-        # sr_out = self.sr.forward(feat1, feat3)
-
+        # ------------------------加强特征提取网络------------------------#
+        # 20, 20, 1024 => 20, 20, 512
         P5 = self.sppcspc(feat3)
+        # 20, 20, 512 => 20, 20, 256
         P5_conv = self.conv_for_P5(P5)
+        # 20, 20, 256 => 40, 40, 256
         P5_upsample = self.upsample(P5_conv)
-        # print(P5.shape)
-
+        # 40, 40, 256 cat 40, 40, 256 => 40, 40, 512
         P4 = torch.cat([self.conv_for_feat2(feat2), P5_upsample], 1)
+        # 40, 40, 512 => 40, 40, 256
         P4 = self.conv3_for_upsample1(P4)
+
+        # 40, 40, 256 => 40, 40, 128
         P4_conv = self.conv_for_P4(P4)
+        # 40, 40, 128 => 80, 80, 128
         P4_upsample = self.upsample(P4_conv)
-        # print(P4.shape)
-
+        # 80, 80, 128 cat 80, 80, 128 => 80, 80, 256
         P3 = torch.cat([self.conv_for_feat1(feat1), P4_upsample], 1)
+        # 80, 80, 256 => 80, 80, 128
         P3 = self.conv3_for_upsample2(P3)
-        # print(P3.shape)
-        # -----------------------------------------------#
-        #   尺度不变特征序列
-        # -----------------------------------------------#
-        """P5_reshape = self.reshape5(P5)
-        P4_reshape = self.reshape4(P4)
-        P5_reshape = P5_reshape.unsqueeze(2)
-        P4_reshape = P4_reshape.unsqueeze(2)
-        P3_reshape = P3.unsqueeze(2)
-        sequence = torch.cat((P5_reshape, P4_reshape, P3_reshape), dim=2)
-        # print(sequence.shape)
-        sequence = self.scale_sequence(sequence)
-        sequence = sequence.squeeze(2)
-        sequence = torch.cat((sequence, P3), dim=1)"""
 
-        if 1 <= self.phi_attention <= 4:
-            # sequence = self.P3_attention(sequence)
-            P3 = self.P3_attention(P3)
-
+        # 80, 80, 128 => 40, 40, 256
         P3_downsample = self.down_sample1(P3)
+        # 40, 40, 256 cat 40, 40, 256 => 40, 40, 512
         P4 = torch.cat([P3_downsample, P4], 1)
+        # 40, 40, 512 => 40, 40, 256
         P4 = self.conv3_for_downsample1(P4)
 
-        if 1 <= self.phi_attention <= 4:
-            P4 = self.P4_attention(P4)
-
+        # 40, 40, 256 => 20, 20, 512
         P4_downsample = self.down_sample2(P4)
+        # 20, 20, 512 cat 20, 20, 512 => 20, 20, 1024
         P5 = torch.cat([P4_downsample, P5], 1)
+        # 20, 20, 1024 => 20, 20, 512
         P5 = self.conv3_for_downsample2(P5)
-
-        if 1 <= self.phi_attention <= 4:
-            P5 = self.P5_attention(P5)
+        # ------------------------加强特征提取网络------------------------#
+        # P3 80, 80, 128
+        # P4 40, 40, 256
+        # P5 20, 20, 512
 
         P3 = self.rep_conv_1(P3)
         P4 = self.rep_conv_2(P4)
@@ -519,3 +563,4 @@ class YoloBody(nn.Module):
         out0 = self.yolo_head_P5(P5)
 
         return [out0, out1, out2]
+
