@@ -391,89 +391,89 @@ class YoloBody(nn.Module):
         # ---------------------------------------------------#
         if phi == 'tiny':
 
-            self.backbone = tinyBackbone(transition_channels, block_channels, n, pretrained=pretrained)
+            self.backbone = tinyBackbone(transition_channels, block_channels * pruned, n, pretrained=pretrained, pruned=pruned)
 
             self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
 
-            self.sppcspc = tinySPPCSPC(transition_channels * 32, transition_channels * 16)
-            self.conv_for_P5 = Conv(transition_channels * 16, transition_channels * 8)
-            self.conv_for_feat2 = Conv(transition_channels * 16, transition_channels * 8)
-            self.conv3_for_upsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
-                                                          transition_channels * 8, e=e, n=n, ids=ids)
+            self.sppcspc = tinySPPCSPC(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned))
+            self.conv_for_P5 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned))
+            self.conv_for_feat2 = Conv(int(transition_channels * 16 * pruned) , int(transition_channels * 8 * pruned))
+            self.conv3_for_upsample1 = Multi_Concat_Block(int(transition_channels * 16 * pruned), int(panet_channels * 4 * pruned),
+                                                          int(transition_channels * 8 * pruned), e=e, n=n, ids=ids)
 
-            self.conv_for_P4 = Conv(transition_channels * 8, transition_channels * 4)
-            self.conv_for_feat1 = Conv(transition_channels * 8, transition_channels * 4)
-            self.conv3_for_upsample2 = Multi_Concat_Block(transition_channels * 8, panet_channels * 2,
-                                                          transition_channels * 4, e=e, n=n, ids=ids)
+            self.conv_for_P4 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned))
+            self.conv_for_feat1 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned))
+            self.conv3_for_upsample2 = Multi_Concat_Block(int(transition_channels * 8 * pruned), int(panet_channels * 2 * pruned),
+                                                          int(transition_channels * 4 * pruned), e=e, n=n, ids=ids)
 
-            self.down_sample1 = Conv(transition_channels * 4, transition_channels * 8, k=3, s=2)
-            self.conv3_for_downsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
-                                                            transition_channels * 8, e=e, n=n, ids=ids)
+            self.down_sample1 = Conv(int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned), k=3, s=2)
+            self.conv3_for_downsample1 = Multi_Concat_Block(int(transition_channels * 16 * pruned), int(panet_channels * 4 * pruned),
+                                                            int(transition_channels * 8 * pruned), e=e, n=n, ids=ids)
 
-            self.down_sample2 = Conv(transition_channels * 8, transition_channels * 16, k=3, s=2)
-            self.conv3_for_downsample2 = Multi_Concat_Block(transition_channels * 32, panet_channels * 8,
-                                                            transition_channels * 16, e=e, n=n, ids=ids)
+            self.down_sample2 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 16 * pruned), k=3, s=2)
+            self.conv3_for_downsample2 = Multi_Concat_Block(int(transition_channels * 32 * pruned), int(panet_channels * 8 * pruned),
+                                                            int(transition_channels * 16 * pruned), e=e, n=n, ids=ids)
 
-            self.rep_conv_1 = Conv(transition_channels * 4, transition_channels * 8, 3, 1)
-            self.rep_conv_2 = Conv(transition_channels * 8, transition_channels * 16, 3, 1)
-            self.rep_conv_3 = Conv(transition_channels * 16, transition_channels * 32, 3, 1)
+            self.rep_conv_1 = Conv(int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned), 3, 1)
+            self.rep_conv_2 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 16 * pruned), 3, 1)
+            self.rep_conv_3 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 32 * pruned), 3, 1)
 
-            self.yolo_head_P3 = nn.Conv2d(transition_channels * 8, len(anchors_mask[2]) * (5 + num_classes), 1)
-            self.yolo_head_P4 = nn.Conv2d(transition_channels * 16, len(anchors_mask[1]) * (5 + num_classes), 1)
-            self.yolo_head_P5 = nn.Conv2d(transition_channels * 32, len(anchors_mask[0]) * (5 + num_classes), 1)
+            self.yolo_head_P3 = nn.Conv2d(int(transition_channels * 8 * pruned), len(anchors_mask[2]) * (5 + num_classes), 1)
+            self.yolo_head_P4 = nn.Conv2d(int(transition_channels * 16 * pruned), len(anchors_mask[1]) * (5 + num_classes), 1)
+            self.yolo_head_P5 = nn.Conv2d(int(transition_channels * 32 * pruned), len(anchors_mask[0]) * (5 + num_classes), 1)
 
         else:
 
-            self.backbone = Backbone(transition_channels, block_channels, n, phi, pretrained=pretrained)
+            self.backbone = Backbone(transition_channels, block_channels * pruned, n, phi, pretrained=pretrained, pruned=pruned)
 
             # ------------------------加强特征提取网络------------------------#
             self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
 
             # 20, 20, 1024 => 20, 20, 512
-            self.sppcspc = SPPCSPC(transition_channels * 32, transition_channels * 16)
+            self.sppcspc = SPPCSPC(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned))
             # 20, 20, 512 => 20, 20, 256 => 40, 40, 256
-            self.conv_for_P5 = Conv(transition_channels * 16, transition_channels * 8)
+            self.conv_for_P5 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned))
             # 40, 40, 1024 => 40, 40, 256
-            self.conv_for_feat2 = Conv(transition_channels * 32, transition_channels * 8)
+            self.conv_for_feat2 = Conv(int(transition_channels * 32 * pruned), int(transition_channels * 8 * pruned))
             # 40, 40, 512 => 40, 40, 256
-            self.conv3_for_upsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
-                                                          transition_channels * 8, e=e, n=n, ids=ids)
+            self.conv3_for_upsample1 = Multi_Concat_Block(int(transition_channels * 16 * pruned), int(panet_channels * 4 * pruned),
+                                                          int(transition_channels * 8 * pruned), e=e, n=n, ids=ids)
 
             # 40, 40, 256 => 40, 40, 128 => 80, 80, 128
-            self.conv_for_P4 = Conv(transition_channels * 8, transition_channels * 4)
+            self.conv_for_P4 = Conv(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned))
             # 80, 80, 512 => 80, 80, 128
-            self.conv_for_feat1 = Conv(transition_channels * 16, transition_channels * 4)
+            self.conv_for_feat1 = Conv(int(transition_channels * 16 * pruned), int(transition_channels * 4 * pruned))
             # 80, 80, 256 => 80, 80, 128
-            self.conv3_for_upsample2 = Multi_Concat_Block(transition_channels * 8, panet_channels * 2,
-                                                          transition_channels * 4, e=e, n=n, ids=ids)
+            self.conv3_for_upsample2 = Multi_Concat_Block(int(transition_channels * 8 * pruned), int(panet_channels * 2 * pruned),
+                                                          int(transition_channels * 4 * pruned), e=e, n=n, ids=ids)
 
             # 80, 80, 128 => 40, 40, 256
-            self.down_sample1 = Transition_Block(transition_channels * 4, transition_channels * 4)
+            self.down_sample1 = Transition_Block(int(transition_channels * 4 * pruned), int(transition_channels * 4 * pruned))
             # 40, 40, 512 => 40, 40, 256
-            self.conv3_for_downsample1 = Multi_Concat_Block(transition_channels * 16, panet_channels * 4,
-                                                            transition_channels * 8, e=e, n=n, ids=ids)
+            self.conv3_for_downsample1 = Multi_Concat_Block(int(transition_channels * 16 * pruned), int(panet_channels * 4 * pruned),
+                                                            int(transition_channels * 8 * pruned), e=e, n=n, ids=ids)
 
             # 40, 40, 256 => 20, 20, 512
-            self.down_sample2 = Transition_Block(transition_channels * 8, transition_channels * 8)
+            self.down_sample2 = Transition_Block(int(transition_channels * 8 * pruned), int(transition_channels * 8 * pruned))
             # 20, 20, 1024 => 20, 20, 512
-            self.conv3_for_downsample2 = Multi_Concat_Block(transition_channels * 32, panet_channels * 8,
-                                                            transition_channels * 16, e=e, n=n, ids=ids)
+            self.conv3_for_downsample2 = Multi_Concat_Block(int(transition_channels * 32 * pruned), int(panet_channels * 8 * pruned),
+                                                            int(transition_channels * 16 * pruned), e=e, n=n, ids=ids)
             # ------------------------加强特征提取网络------------------------#
 
             # 80, 80, 128 => 80, 80, 256
-            self.rep_conv_1 = conv(transition_channels * 4, transition_channels * 8, 3, 1)
+            self.rep_conv_1 = conv(int(transition_channels * 4 * pruned), int(transition_channels * 8 * pruned), 3, 1)
             # 40, 40, 256 => 40, 40, 512
-            self.rep_conv_2 = conv(transition_channels * 8, transition_channels * 16, 3, 1)
+            self.rep_conv_2 = conv(int(transition_channels * 8 * pruned), int(transition_channels * 16 * pruned), 3, 1)
             # 20, 20, 512 => 20, 20, 1024
-            self.rep_conv_3 = conv(transition_channels * 16, transition_channels * 32, 3, 1)
+            self.rep_conv_3 = conv(int(transition_channels * 16 * pruned), int(transition_channels * 32 * pruned), 3, 1)
 
             # 4 + 1 + num_classes
             # 80, 80, 256 => 80, 80, 3 * 25 (4 + 1 + 20) & 85 (4 + 1 + 80)
-            self.yolo_head_P3 = nn.Conv2d(transition_channels * 8, len(anchors_mask[2]) * (5 + num_classes), 1)
+            self.yolo_head_P3 = nn.Conv2d(int(transition_channels * 8 * pruned), len(anchors_mask[2]) * (5 + num_classes), 1)
             # 40, 40, 512 => 40, 40, 3 * 25 & 85
-            self.yolo_head_P4 = nn.Conv2d(transition_channels * 16, len(anchors_mask[1]) * (5 + num_classes), 1)
+            self.yolo_head_P4 = nn.Conv2d(int(transition_channels * 16 * pruned), len(anchors_mask[1]) * (5 + num_classes), 1)
             # 20, 20, 512 => 20, 20, 3 * 25 & 85
-            self.yolo_head_P5 = nn.Conv2d(transition_channels * 32, len(anchors_mask[0]) * (5 + num_classes), 1)
+            self.yolo_head_P5 = nn.Conv2d(int(transition_channels * 32 * pruned), len(anchors_mask[0]) * (5 + num_classes), 1)
 
         """if phi_attention >= 1 and phi_attention <= 3:
             # self.feat1_attention = attention_bocks[phi_attention - 1](512)

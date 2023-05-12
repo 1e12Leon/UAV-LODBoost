@@ -88,7 +88,7 @@ class Transition_Block(nn.Module):
 
 
 class Backbone(nn.Module):
-    def __init__(self, transition_channels, block_channels, n, phi, pretrained=False):
+    def __init__(self, transition_channels, block_channels, n, phi, pretrained=False,pruned=1):
         super().__init__()
         # -----------------------------------------------#
         #   输入图片是640, 640, 3
@@ -99,29 +99,29 @@ class Backbone(nn.Module):
         }[phi]
         # 640, 640, 3 => 640, 640, 32 => 320, 320, 64
         self.stem = nn.Sequential(
-            Conv(3, transition_channels, 3, 1),
-            Conv(transition_channels, transition_channels * 2, 3, 2),
-            Conv(transition_channels * 2, transition_channels * 2, 3, 1),
+            Conv(3, int(transition_channels * pruned), 3, 1),
+            Conv(int(transition_channels * pruned), int(transition_channels * 2 * pruned), 3, 2),
+            Conv(int(transition_channels * 2 * pruned), int(transition_channels * 2 * pruned), 3, 1),
         )
         # 320, 320, 64 => 160, 160, 128 => 160, 160, 256
         self.dark2 = nn.Sequential(
-            Conv(transition_channels * 2, transition_channels * 4, 3, 2),
-            Multi_Concat_Block(transition_channels * 4, block_channels * 2, transition_channels * 8, n=n, ids=ids),
+            Conv(int(transition_channels * 2 * pruned), int(transition_channels * 4 * pruned), 3, 2),
+            Multi_Concat_Block(int(transition_channels * 4 * pruned), int(block_channels * 2 * pruned), int(transition_channels * 8 * pruned), n=n, ids=ids),
         )
         # 160, 160, 256 => 80, 80, 256 => 80, 80, 512
         self.dark3 = nn.Sequential(
-            Transition_Block(transition_channels * 8, transition_channels * 4),
-            Multi_Concat_Block(transition_channels * 8, block_channels * 4, transition_channels * 16, n=n, ids=ids),
+            Transition_Block(int(transition_channels * 8 * pruned), int(transition_channels * 4 * pruned)),
+            Multi_Concat_Block(int(transition_channels * 8 * pruned), int(block_channels * 4 * pruned), int(transition_channels * 16 * pruned), n=n, ids=ids),
         )
         # 80, 80, 512 => 40, 40, 512 => 40, 40, 1024
         self.dark4 = nn.Sequential(
-            Transition_Block(transition_channels * 16, transition_channels * 8),
-            Multi_Concat_Block(transition_channels * 16, block_channels * 8, transition_channels * 32, n=n, ids=ids),
+            Transition_Block(int(transition_channels * 16 * pruned), int(transition_channels * 8 * pruned)),
+            Multi_Concat_Block(int(transition_channels * 16 * pruned), int(block_channels * 8 * pruned), int(transition_channels * 32 * pruned), n=n, ids=ids),
         )
         # 40, 40, 1024 => 20, 20, 1024 => 20, 20, 1024
         self.dark5 = nn.Sequential(
-            Transition_Block(transition_channels * 32, transition_channels * 16),
-            Multi_Concat_Block(transition_channels * 32, block_channels * 8, transition_channels * 32, n=n, ids=ids),
+            Transition_Block(int(transition_channels * 32 * pruned), int(transition_channels * 16 * pruned)),
+            Multi_Concat_Block(int(transition_channels * 32 * pruned), int(block_channels * 8 * pruned), int(transition_channels * 32 * pruned), n=n, ids=ids),
         )
 
         if pretrained:
@@ -155,30 +155,34 @@ class Backbone(nn.Module):
 
 
 class tinyBackbone(nn.Module):
-    def __init__(self, transition_channels, block_channels, n, pretrained=False):
+    def __init__(self, transition_channels, block_channels, n, pretrained=False,pruned=1):
         super().__init__()
         # -----------------------------------------------#
         #   输入图片是640, 640, 3
         # -----------------------------------------------#
         ids = [-1, -2, -3, -4]
 
-        self.stem = Conv(3, transition_channels * 2, 3, 2)
+        self.stem = Conv(3, int(transition_channels * 2 * pruned), 3, 2)
 
         self.dark2 = nn.Sequential(
-            Conv(transition_channels * 2, transition_channels * 4, 3, 2),
-            Multi_Concat_Block(transition_channels * 4, block_channels * 2, transition_channels * 4, n=n, ids=ids),
+            Conv(int(transition_channels * 2 * pruned), int(transition_channels * 4 * pruned), 3, 2),
+            Multi_Concat_Block(int(transition_channels * 4 * pruned), int(block_channels * 2 * pruned),
+                               int(transition_channels * 4 * pruned), n=n, ids=ids),
         )
         self.dark3 = nn.Sequential(
             MP(),
-            Multi_Concat_Block(transition_channels * 4, block_channels * 4, transition_channels * 8, n=n, ids=ids),
+            Multi_Concat_Block(int(transition_channels * 4 * pruned), int(block_channels * 4 * pruned),
+                               int(transition_channels * 8 * pruned), n=n, ids=ids),
         )
         self.dark4 = nn.Sequential(
             MP(),
-            Multi_Concat_Block(transition_channels * 8, block_channels * 8, transition_channels * 16, n=n, ids=ids),
+            Multi_Concat_Block(int(transition_channels * 8 * pruned), int(block_channels * 8 * pruned),
+                               int(transition_channels * 16 * pruned), n=n, ids=ids),
         )
         self.dark5 = nn.Sequential(
             MP(),
-            Multi_Concat_Block(transition_channels * 16, block_channels * 16, transition_channels * 32, n=n, ids=ids),
+            Multi_Concat_Block(int(transition_channels * 16 * pruned), int(block_channels * 16 * pruned),
+                               int(transition_channels * 32 * pruned), n=n, ids=ids),
         )
 
         if pretrained:
