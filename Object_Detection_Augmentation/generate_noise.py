@@ -121,7 +121,7 @@ if __name__ == "__main__":
         img_dst_path = os.path.join(Out_JPEGImages_path, img_name)
         img = cv2.imread(img_src_path)
         xml_src_path = os.path.join(Origin_Annotations_path, name+'.xml')
-        xml_dst_path = os.path.join(Out_Annotations_path, name+'xml')
+        xml_dst_path = os.path.join(Out_Annotations_path, name+'.xml')
 
 
         type = noise_type[np.random.randint(4)]

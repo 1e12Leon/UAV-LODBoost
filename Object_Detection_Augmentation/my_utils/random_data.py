@@ -308,3 +308,46 @@ def get_random_data_with_MixUp(image_1, box_1, image_2, box_2):
     else:
         new_boxes = np.concatenate([box_1, box_2], axis=0)
     return new_image, new_boxes
+
+# 生成裁剪区域B的坐标值函数
+def rand_bbox(img, lam):
+    H = img.shape[0]
+    W = img.shape[1]
+    # 求B的rw, rh
+    cut_rat = np.sqrt(1.0 - lam)
+    cut_w = np.int(W * cut_rat)
+    cut_h = np.int(H * cut_rat)
+    # 求B的rx, ry
+    cx = np.random.randint(W)
+    cy = np.random.randint(H)
+    # 限制坐标区域不超过样本大小
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+    # 返回裁剪B区域的坐标值
+    return bbx1, bby1, bbx2, bby2
+
+# # 设定lambda的值，服从beta分布
+# lam = np.random.beta(1, 1)
+# lam = max(lam, 1 - lam)
+
+def get_random_data_with_CutMix(image_1, box_1, image_2, box_2, beta = 1):
+    H = image_1.shape[0]
+    W = image_1.shape[1]
+
+    new_image = image_1.copy()
+
+    lam = np.random.beta(beta, beta)
+    lam = max(lam, 1 - lam)
+    bbx1, bby1, bbx2, bby2 = rand_bbox(image_1, lam)
+    print("bbx1:", bbx1, "bby1:", bby1)
+    print("bbx2:", bbx2, "bby2:", bby2)
+
+    new_image[bbx1:bbx2, bby1:bby2] = image_2[bbx1:bbx2, bby1:bby2]
+    cv2.imshow("image_1", image_1)
+    cv2.imshow("image_2", image_2)
+    cv2.imshow("new_image", new_image)
+    cv2.waitKey(0)
+
+

@@ -102,7 +102,9 @@ if __name__ == "__main__":
         xml_name_2  = os.path.join(Origin_Annotations_path, sample_xmls[1])
             
         line_1 = convert_annotation(jpg_name_1, xml_name_1, unique_labels)
+        print("line_1", line_1)
         line_2 = convert_annotation(jpg_name_2, xml_name_2, unique_labels)
+        print("line_2", line_2)
         
         #------------------------------#
         #   各自数据增强
