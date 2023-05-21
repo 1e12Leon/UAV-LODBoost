@@ -210,69 +210,39 @@ class EPSABlock(nn.Module):
         return out
 
 
-"""
-class EPSANet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000):
-        super(EPSANet, self).__init__()
-        self.inplanes = 64
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layers(block, 64, layers[0], stride=1)
-        self.layer2 = self._make_layers(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layers(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layers(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+#-----------------------------------------------------------------------#
+#   CA部分
+#-----------------------------------------------------------------------#
+class CA_Block(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(CA_Block, self).__init__()
 
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+        self.conv_1x1 = nn.Conv2d(in_channels=channel, out_channels=channel // reduction, kernel_size=1, stride=1,
+                                  bias=False)
 
-    def _make_layers(self, block, planes, num_blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
+        self.relu = nn.ReLU()
+        self.bn = nn.BatchNorm2d(channel // reduction)
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, num_blocks):
-            layers.append(block(self.inplanes, planes))
+        self.F_h = nn.Conv2d(in_channels=channel // reduction, out_channels=channel, kernel_size=1, stride=1,
+                             bias=False)
+        self.F_w = nn.Conv2d(in_channels=channel // reduction, out_channels=channel, kernel_size=1, stride=1,
+                             bias=False)
 
-        return nn.Sequential(*layers)
+        self.sigmoid_h = nn.Sigmoid()
+        self.sigmoid_w = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        _, _, h, w = x.size()
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        x_h = torch.mean(x, dim=3, keepdim=True).permute(0, 1, 3, 2)
+        x_w = torch.mean(x, dim=2, keepdim=True)
 
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        x_cat_conv_relu = self.relu(self.bn(self.conv_1x1(torch.cat((x_h, x_w), 3))))
 
-        return x
+        x_cat_conv_split_h, x_cat_conv_split_w = x_cat_conv_relu.split([h, w], 3)
 
+        s_h = self.sigmoid_h(self.F_h(x_cat_conv_split_h.permute(0, 1, 3, 2)))
+        s_w = self.sigmoid_w(self.F_w(x_cat_conv_split_w))
 
-def epsanet50():
-    model = EPSANet(EPSABlock, [3, 4, 6, 3], num_classes=1000)
-    return model
-
-def epsanet101():
-    model = EPSANet(EPSABlock, [3, 4, 23, 3], num_classes=1000)
-    return model"""
+        out = x * s_h.expand_as(x) * s_w.expand_as(x)
+        return out

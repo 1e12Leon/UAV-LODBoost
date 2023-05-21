@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 from torchvision.transforms import Resize
 from nets.backbone import Backbone, Multi_Concat_Block, Conv, SiLU, Transition_Block, autopad, tinyBackbone
-from utils.attentions import se_block, cbam_block, eca_block, EPSABlock, PSAModule
+from utils.attentions import se_block, cbam_block, eca_block, CA_Block
 
-attention_bocks = [se_block, cbam_block, eca_block, PSAModule]
+attention_bocks = [se_block, cbam_block, eca_block, CA_Block]
 
 
 class SPPCSPC(nn.Module):
@@ -366,7 +366,7 @@ class SRModule(nn.Module):
 #   yolo_body
 # ---------------------------------------------------#
 class YoloBody(nn.Module):
-    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=1, pruned=1):
+    def __init__(self, anchors_mask, num_classes, phi, pretrained=False, phi_attention=0, pruned=1):
         super(YoloBody, self).__init__()
         # -----------------------------------------------#
         #   定义了不同yolov7版本的参数
@@ -475,18 +475,16 @@ class YoloBody(nn.Module):
             # 20, 20, 512 => 20, 20, 3 * 25 & 85
             self.yolo_head_P5 = nn.Conv2d(int(transition_channels * 32 * pruned), len(anchors_mask[0]) * (5 + num_classes), 1)
 
-        """if phi_attention >= 1 and phi_attention <= 3:
+        self.phi_attention = phi_attention
+
+        if phi_attention >= 1 and phi_attention <= 4:
             # self.feat1_attention = attention_bocks[phi_attention - 1](512)
             self.P3_attention = attention_bocks[phi_attention - 1](int(128 * pruned))
-            self.P4_attention = attention_bocks[phi_attention - 1](int(256 * pruned))
-            self.P5_attention = attention_bocks[phi_attention - 1](int(512 * pruned))
+            # self.P4_attention = attention_bocks[phi_attention - 1](int(256 * pruned))
+            # self.P5_attention = attention_bocks[phi_attention - 1](int(512 * pruned))
             # self.feat2_attention = attention_bocks[phi_attention - 1](1024)
             # self.feat3_attention = attention_bocks[phi_attention - 1](1024)
 
-        if phi_attention == 4:
-            self.P3_attention = attention_bocks[phi_attention - 1](256, 256)
-            self.P4_attention = attention_bocks[phi_attention - 1](256, 256)
-            self.P5_attention = attention_bocks[phi_attention - 1](512, 512)"""
 
     def fuse(self):
         print('Fusing layers... ')
@@ -524,6 +522,9 @@ class YoloBody(nn.Module):
         P3 = torch.cat([self.conv_for_feat1(feat1), P4_upsample], 1)
         # 80, 80, 256 => 80, 80, 128
         P3 = self.conv3_for_upsample2(P3)
+
+        if 1 <= self.phi <= 4:
+            P3 = self.P3_attention(P3)
 
         # 80, 80, 128 => 40, 40, 256
         P3_downsample = self.down_sample1(P3)
