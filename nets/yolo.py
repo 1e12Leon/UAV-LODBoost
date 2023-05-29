@@ -523,7 +523,7 @@ class YoloBody(nn.Module):
         # 80, 80, 256 => 80, 80, 128
         P3 = self.conv3_for_upsample2(P3)
 
-        if 1 <= self.phi <= 4:
+        if 1 <= self.phi_attention <= 4:
             P3 = self.P3_attention(P3)
 
         # 80, 80, 128 => 40, 40, 256

@@ -11,9 +11,9 @@ classfication = Classification()
 #--------------------------------------------#
 #   修改路径
 #--------------------------------------------#
-img_path = 'Data/JPEGImages'  # 原始数据路径
-aug_img_path = 'Data/aug_JPEGImages'  # 增强数据路径
-aug_xml_path = 'Data/aug_Annotations'  # 增强标注路径
+img_path = '../Data/JPEGImages'  # 原始数据路径
+aug_img_path = '../Data/aug_JPEGImages'  # 增强数据路径
+aug_xml_path = '../Data/aug_Annotations'  # 增强标注路径
 
 valid_path = 'Data/valid'  # 有效数据保存路径
 valid_xml_path = 'Data/valid_xml'  # 有效数据xml保存路径
