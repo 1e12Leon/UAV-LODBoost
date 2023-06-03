@@ -1,44 +1,32 @@
 <annotation>
 	<folder>VOC2007</folder>
-	<filename>000001.jpg</filename>
+	<filename>000002.jpg</filename>
 	<source>
 		<database>The VOC2007 Database</database>
 		<annotation>PASCAL VOC2007</annotation>
 		<image>flickr</image>
-		<flickrid>341012865</flickrid>
+		<flickrid>329145082</flickrid>
 	</source>
 	<owner>
-		<flickrid>Fried Camels</flickrid>
-		<name>Jinky the Fruit Bat</name>
+		<flickrid>hiromori2</flickrid>
+		<name>Hiroyuki Mori</name>
 	</owner>
 	<size>
-		<width>353</width>
+		<width>335</width>
 		<height>500</height>
 		<depth>3</depth>
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>dog</name>
-		<pose>Left</pose>
-		<truncated>1</truncated>
+		<name>train</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
 		<difficult>0</difficult>
 		<bndbox>
-			<xmin>48</xmin>
-			<ymin>240</ymin>
-			<xmax>195</xmax>
-			<ymax>371</ymax>
-		</bndbox>
-	</object>
-	<object>
-		<name>person</name>
-		<pose>Left</pose>
-		<truncated>1</truncated>
-		<difficult>0</difficult>
-		<bndbox>
-			<xmin>8</xmin>
-			<ymin>12</ymin>
-			<xmax>352</xmax>
-			<ymax>498</ymax>
+			<xmin>139</xmin>
+			<ymin>200</ymin>
+			<xmax>207</xmax>
+			<ymax>301</ymax>
 		</bndbox>
 	</object>
 </annotation>

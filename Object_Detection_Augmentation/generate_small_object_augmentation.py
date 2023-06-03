@@ -18,7 +18,7 @@ Out_VOCdevkit_path      = "VOCdevkit"
 #-----------------------------------------------------------------------------------#
 #   Out_Num                 需要利用小目标图像增强生成多少组图片
 #-----------------------------------------------------------------------------------#
-Out_Num                 = 10
+Out_Num                 = 20
 #-----------------------------------------------------------------------------------#
 #   Cur_Num                 当前小目标图像增强生成图片的组数
 #-----------------------------------------------------------------------------------#
@@ -29,9 +29,16 @@ Cur_Num = 0
 #-----------------------------------------------------------------------------------#
 copy_times = 2
 
+#-----------------------------------------------------------------------------------#
+#   MAX_NUM                 各小目标图片复制总个数不超过MAX_NUM
+#-----------------------------------------------------------------------------------#
+MAX_NUM = 8
+
 # -----------------------------------------------------------------------------------#
 #   下面定义了xml里面的组成模块，无需改动。
 # -----------------------------------------------------------------------------------#
+
+
 headstr = """\
 <annotation>
     <folder>VOC</folder>
@@ -104,6 +111,8 @@ def compute_overlap(annot_a, annot_b):
 # epochs 次数
 epochs = 10
 
+# annot表示小目标
+# annots表示目标图上的目标框
 def create_copy_annot(h, w, annot, annots):
     # annot = annot.astype(np.int)
     annot_h, annot_w = annot[3] - annot[1], annot[2] - annot[0]
@@ -136,7 +145,17 @@ def add_patch_in_img(annot, copy_annot, image_tar, image_small):
     return image_tar
 
 # 获得小目标的预测框
-def get_small_object_list(annotation_line):
+def get_small_object_list(annotation_line, is_special = False, cls = -1):
+    '''
+
+    Args:
+        annotation_line: 小目标所在文件
+        is_special: 是否获取特定种类的小目标
+        cls: 小目标种类索引
+
+    Returns:
+
+    '''
     small_object_list = list()
     line = annotation_line.split()
     #------------------------------#
@@ -155,8 +174,12 @@ def get_small_object_list(annotation_line):
         annot = annots[idx]
         annot_h, annot_w = annot[3] - annot[1], annot[2] - annot[0]
 
-        if is_small_object(annot_h, annot_w):
-            small_object_list.append(idx)
+        if is_special == True:
+            if is_small_object(annot_h, annot_w) and annot[4] == cls:
+                small_object_list.append(idx)
+        else:
+            if is_small_object(annot_h, annot_w):
+                small_object_list.append(idx)
 
     return small_object_list, annots, image_data
 
@@ -167,7 +190,6 @@ def get_random_data_with_SOA(annotation_line, image_small, small_object_list, an
         image_small: 小目标所在图片
         small_object_list: 小目标索引数组
         annots: 小目标annot信息 [[xmin, ymin, xmax, ymax, label], ...]
-
     Returns:
 
     '''
@@ -192,29 +214,38 @@ def get_random_data_with_SOA(annotation_line, image_small, small_object_list, an
     # ------------------------------#
     l = len(small_object_list)
     if l == 0:
-        print("小目标个数:", l)
         return None, None
 
     # ------------------------------#
     #   copy小目标的种类数量 copy个数不超过小样本预测框个数
     # ------------------------------#
-    copy_object_num = np.random.randint(1, l)
+    if l == 1:
+        copy_object_num = 1
+    else:
+        copy_object_num = np.random.randint(1, l)
+
     print("小目标的种类数量:", copy_object_num)
     random_list = sample(range(l), copy_object_num)
     annot_idx_of_small_object = [small_object_list[idx] for idx in random_list]
     select_annots = annots[annot_idx_of_small_object, :]
-    print("select_annots:", select_annots)
 
     new_annots = box.tolist()
+    # print("new_annots", np.array(new_annots))
 
+    iter = 0
     for idx in range(copy_object_num):
         annot = select_annots[idx]
 
         for i in range(copy_times):
-            new_annot = create_copy_annot(ih, iw, annot, box)
+            new_annot = create_copy_annot(ih, iw, annot, np.array(new_annots))
             if new_annot is not None:
+                # print("new_annot:", new_annot)
                 image_data = add_patch_in_img(new_annot, annot, image_data, image_small)
                 new_annots.append(new_annot)
+
+                iter += 1
+                if iter == MAX_NUM:
+                    return image_data, new_annots
 
     return image_data, new_annots
 
@@ -251,27 +282,32 @@ if __name__ == "__main__":
         sample_xmls = sample(xml_names, 2)
         unique_labels = get_classes(sample_xmls, Origin_Annotations_path)
 
+        if 'gtz' in unique_labels:
+            cls = unique_labels.index('gtz')
+        else:
+            cls = ''
+
         jpg_name_1 = os.path.join(Origin_JPEGImages_path, os.path.splitext(sample_xmls[0])[0] + '.jpg')
         jpg_name_2 = os.path.join(Origin_JPEGImages_path, os.path.splitext(sample_xmls[1])[0] + '.jpg')
         xml_name_1 = os.path.join(Origin_Annotations_path, sample_xmls[0])
         xml_name_2 = os.path.join(Origin_Annotations_path, sample_xmls[1])
 
         line_1 = convert_annotation(jpg_name_1, xml_name_1, unique_labels)
-        print("line_1", line_1)
         line_2 = convert_annotation(jpg_name_2, xml_name_2, unique_labels)
-        print("line_2", line_2)
 
         input_shape = Image.open(line_1.split()[0]).size
         #------------------------------#
         #  小样本目标检测
         #------------------------------#
 
-        small_object_list, annots, image_small = get_small_object_list(line_2)
+        # 复制特定种类的小目标
+        small_object_list, annots, image_small = get_small_object_list(line_2, is_special=False, cls=cls)
 
         image_data, box_data = get_random_data_with_SOA(line_1, image_small, small_object_list, annots)
+
         if image_data is not None:
-            print("line_1", line_1)
-            print("line_2", line_2)
+            print("line_1", line_1.split()[0])
+            print("line_2", line_2.split()[0])
             img = Image.fromarray(image_data.astype(np.uint8))
             img.save(os.path.join(Out_JPEGImages_path, str(Cur_Num) + '.jpg'))
             write_xml(os.path.join(Out_Annotations_path, str(Cur_Num) + '.xml'), os.path.join(Out_JPEGImages_path, str(Cur_Num) + '.jpg'), \

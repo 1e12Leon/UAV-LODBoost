@@ -1,44 +1,104 @@
 <annotation>
 	<folder>VOC2007</folder>
-	<filename>000003.jpg</filename>
+	<filename>000004.jpg</filename>
 	<source>
 		<database>The VOC2007 Database</database>
 		<annotation>PASCAL VOC2007</annotation>
 		<image>flickr</image>
-		<flickrid>138563409</flickrid>
+		<flickrid>322032655</flickrid>
 	</source>
 	<owner>
-		<flickrid>RandomEvent101</flickrid>
-		<name>?</name>
+		<flickrid>paytonc</flickrid>
+		<name>Payton Chung</name>
 	</owner>
 	<size>
 		<width>500</width>
-		<height>375</height>
+		<height>406</height>
 		<depth>3</depth>
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>sofa</name>
+		<name>car</name>
+		<pose>Frontal</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>13</xmin>
+			<ymin>311</ymin>
+			<xmax>84</xmax>
+			<ymax>362</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>car</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>362</xmin>
+			<ymin>330</ymin>
+			<xmax>500</xmax>
+			<ymax>389</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>car</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
 		<difficult>0</difficult>
 		<bndbox>
-			<xmin>123</xmin>
-			<ymin>155</ymin>
-			<xmax>215</xmax>
-			<ymax>195</ymax>
+			<xmin>235</xmin>
+			<ymin>328</ymin>
+			<xmax>334</xmax>
+			<ymax>375</ymax>
 		</bndbox>
 	</object>
 	<object>
-		<name>chair</name>
-		<pose>Left</pose>
+		<name>car</name>
+		<pose>Unspecified</pose>
 		<truncated>0</truncated>
 		<difficult>0</difficult>
 		<bndbox>
-			<xmin>239</xmin>
-			<ymin>156</ymin>
-			<xmax>307</xmax>
-			<ymax>205</ymax>
+			<xmin>175</xmin>
+			<ymin>327</ymin>
+			<xmax>252</xmax>
+			<ymax>364</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>car</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>139</xmin>
+			<ymin>320</ymin>
+			<xmax>189</xmax>
+			<ymax>359</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>car</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>108</xmin>
+			<ymin>325</ymin>
+			<xmax>150</xmax>
+			<ymax>353</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>car</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>84</xmin>
+			<ymin>323</ymin>
+			<xmax>121</xmax>
+			<ymax>350</ymax>
 		</bndbox>
 	</object>
 </annotation>
