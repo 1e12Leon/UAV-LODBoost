@@ -178,7 +178,54 @@ class YOLOLoss(nn.Module):
         
         loss    = box_loss + obj_loss + cls_loss
         return loss
-        
+
+    def comupte_distill_loss(self, predictions, t_predictions, T=20, alpha_balance=0.3):
+        # -------------------------------------------#
+        #   对输入进来的预测结果进行reshape
+        #   bs, 255, 20, 20 => bs, 3, 20, 20, 85
+        #   bs, 255, 40, 40 => bs, 3, 40, 40, 85
+        #   bs, 255, 80, 80 => bs, 3, 80, 80, 85=4+1+80
+        # -------------------------------------------#
+        #   85的含义:
+        #   前4个参数用于判断每一个特征点的回归参数，回归参数调整后可以获得预测框；
+        #   第5个参数用于判断每一个特征点是否包含物体；
+        #   最后80个参数用于判断每一个特征点所包含的物体种类。
+        # -------------------------------------------#
+        for i in range(len(predictions)):
+            bs, _, h, w = predictions[i].size()
+            predictions[i] = predictions[i].view(bs, len(self.anchors_mask[i]), -1, h, w).permute(0, 1, 3, 4,
+                                                                                                  2).contiguous()
+
+        for i in range(len(t_predictions)):
+            bs, _, h, w = t_predictions[i].size()
+            t_predictions[i] = t_predictions[i].view(bs, len(self.anchors_mask[i]), -1, h, w).permute(0, 1, 3, 4,
+                                                                                                      2).contiguous()
+
+        DboxLoss = nn.MSELoss(reduction="none")
+        DclsLoss = nn.KLDivLoss(reduction="none")
+        DobjLoss = nn.MSELoss(reduction="none")
+        box_loss = 0
+        obj_loss = 0
+        cls_loss = 0
+        for i, pi in enumerate(predictions):
+            """
+            没加scale
+            只有当teacher network的objectness value高时，才学习bounding box坐标和class probabilities。
+            https://arxiv.org/pdf/1805.06361.pdf
+            """
+            t_pi = t_predictions[i]
+            # obj
+            obj_loss += torch.mean(DobjLoss(pi[..., 4], t_pi[..., 4]))
+            # bbox
+            box_loss += torch.mean(DboxLoss(pi[..., :4].sigmoid(), t_pi[..., :4].sigmoid()))
+            # class
+            cls_loss += torch.mean(DclsLoss(F.log_softmax(pi[..., 5:] / T, dim=-1),
+                                 F.softmax(t_pi[..., 5:] / T, dim=-1)) * (T * T))
+
+        loss = (box_loss + obj_loss + cls_loss) * alpha_balance
+        # box_loss = DboxLoss(pi, t_pi)
+        return loss
+
     def xywh2xyxy(self, x):
         # Convert nx4 boxes from [x, y, w, h] to [x1, y1, x2, y2]
         y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
