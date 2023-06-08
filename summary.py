@@ -7,13 +7,13 @@ from thop import clever_format, profile
 from nets.yolo import YoloBody
 
 if __name__ == "__main__":
-    input_shape     = [640, 640]
+    input_shape     = [1280, 1280]
     anchors_mask    = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
     num_classes     = 80
-    phi             = 'l'
+    phi             = 'tiny'
     
     device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    m       = YoloBody(anchors_mask, num_classes, phi, False, phi_attention=1).to(device)
+    m       = YoloBody(anchors_mask, num_classes, phi, False, phi_attention=0).to(device)
     for i in m.children():
         print(i)
         print('==============================')

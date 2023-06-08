@@ -160,10 +160,9 @@ def fit_one_epoch_distill(model_train, t_model_train, model, ema, yolo_loss, los
             # ----------------------#
             with torch.no_grad():
                 t_outputs = t_model_train(images)
-                s_outputs = model_train(images)
             # print(outputs[0])
             # print(t_outputs[0].shape)
-            distill_loss_value = yolo_loss.comupte_distill_loss(s_outputs, t_outputs, T=20)
+            distill_loss_value = yolo_loss.comupte_distill_loss(outputs, t_outputs, T=20)
             # print(distill_loss_value)
             loss_value += distill_loss_value
 
@@ -183,7 +182,10 @@ def fit_one_epoch_distill(model_train, t_model_train, model, ema, yolo_loss, los
                 # ----------------------#
                 outputs = model_train(images)
                 loss_value = yolo_loss(outputs, targets, images)
-
+                with torch.no_grad():
+                    t_outputs = t_model_train(images)
+                distill_loss_value = yolo_loss.comupte_distill_loss(outputs, t_outputs, T=20)
+                loss_value += distill_loss_value
 
             # ----------------------#
             #   反向传播

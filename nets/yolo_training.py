@@ -191,10 +191,6 @@ class YOLOLoss(nn.Module):
         #   第5个参数用于判断每一个特征点是否包含物体；
         #   最后80个参数用于判断每一个特征点所包含的物体种类。
         # -------------------------------------------#
-        for i in range(len(predictions)):
-            bs, _, h, w = predictions[i].size()
-            predictions[i] = predictions[i].view(bs, len(self.anchors_mask[i]), -1, h, w).permute(0, 1, 3, 4,
-                                                                                                  2).contiguous()
 
         for i in range(len(t_predictions)):
             bs, _, h, w = t_predictions[i].size()
